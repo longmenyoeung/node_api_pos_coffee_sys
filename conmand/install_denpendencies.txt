@@ -1,0 +1,10 @@
+ Install production dependencies (MySQL version)
+ npm install express sequelize mysql2 dotenv cors joi
+
+
+
+ . Install development dependencies
+ npm install --save-dev nodemon jest supertest eslint
+
+  (Optional) Additional useful packages
+  npm install bcryptjs jsonwebtoken morgan helmet

@@ -1,0 +1,40 @@
+coffee-pos-backend/
+├── .env
+├── .gitignore
+├── package.json
+├── server.js                 # App entry point
+├── config/
+│   ├── database.js           # Sequelize/Prisma client setup
+│   └── express.js            # Express app configuration
+├── models/                   # Database models
+│   ├── Category.js
+│   ├── Product.js
+│   ├── Inventory.js
+│   ├── Customer.js
+│   ├── Order.js
+│   ├── OrderItem.js
+│   └── Payment.js
+├── controllers/              # Business logic & DB interaction
+│   ├── categoryController.js
+│   ├── productController.js
+│   ├── orderController.js
+│   ├── customerController.js
+│   ├── paymentController.js
+│   └── inventoryController.js
+├── routes/                   # API endpoints
+│   ├── categoryRoutes.js
+│   ├── productRoutes.js
+│   ├── orderRoutes.js
+│   ├── customerRoutes.js
+│   ├── paymentRoutes.js
+│   └── inventoryRoutes.js
+├── services/                 # Complex business logic (optional)
+│   ├── orderService.js
+│   └── loyaltyService.js
+├── middlewares/
+│   ├── errorHandler.js
+│   ├── validation.js
+│   └── auth.js (if needed later)
+├── utils/
+│   └── helpers.js
+└── tests/                    # Unit & integration tests
