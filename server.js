@@ -3,6 +3,8 @@ const dotenv = require("dotenv");
 const { syncDatabase } = require("./model");
 const categoryRoute = require('./routes/category.route')
 const productRoute = require('./routes/product.route')
+const customerRoute = require('./routes/customer.route')
+const orderRoute = require('./routes/order.route')
 
 // Load environment variables
 dotenv.config();
@@ -14,6 +16,8 @@ const port = process.env.PORT || 3306;
 app.use(express.json());
 app.use('/api/categories', categoryRoute)
 app.use('/api/products', productRoute)
+app.use('/api/customers', customerRoute)
+app.use('/api/orders', orderRoute)
 
 
 

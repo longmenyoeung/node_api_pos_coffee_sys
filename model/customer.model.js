@@ -18,11 +18,15 @@ const Customer = sequelize.define('Customer', {
             isEmail: true
         }
     },
+    password: {
+        type: DataTypes.STRING(50),
+        allowNull:false
+    },
     phone : {
         type: DataTypes.STRING(20),
         allowNull: true
     },
-    royalty_points: {
+    loyalty_points: {
         type: DataTypes.INTEGER,
         defaultValue: 0
     }

@@ -1,0 +1,32 @@
+1. Create a .gitignore (Crucial for Node.js) 
+Before adding files, prevent your heavy node_modules folder from being uploaded. Run this in your terminal:
+bash
+echo "node_modules/" >> .gitignore
+Use code with caution.
+2. The Push Commands
+Since you are setting this up for the first time, run these commands in order:
+bash
+# Initialize the local repository
+git init
+
+# Add all your project files (API routes, controllers, etc.)
+git add .
+
+# Commit your changes
+git commit -m "Initial commit: Node API for Coffee POS System"
+
+# Rename the branch to main
+git branch -M main
+
+# Link your local folder to your GitHub repository
+git remote add origin https://github.com/longmenyoeung/node_api_pos_coffee_sys.git
+
+# Push your code to GitHub
+git push -u origin main
+Use code with caution.
+3. For Future Updates
+Once the setup above is done, you only need three commands to push new changes:
+bash
+git add .
+git commit -m "Describe your changes here"
+git push
