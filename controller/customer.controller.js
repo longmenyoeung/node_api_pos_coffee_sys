@@ -32,52 +32,43 @@ exports.getCustomerById = async (req, res) =>{
 
 exports.createCustomer = async (req, res) => {
     try {
-        const {first_name, last_name, email,password, phone, royalty_points} = req.body;
-        
-        if(!first_name || !last_name || !email || !password){
-            return res.status(400).json({
-                message:'Messing to complet all the fields.'
-            });
-        }
+        const { first_name, last_name, email, password, phone, loyalty_points } = req.body;
+        const image_url = req.file ? req.file.path : null;
 
-        const customner = await Customer.create({
-            first_name,
-            last_name,
-            email,
-            password,
-            phone,
-            royalty_points
-        })
-
-        res.status(201).json({
-            message:'added customer succesfully',
-            list: customner
-        })
-
-
+        const customer = await Customer.create({
+            first_name, last_name, email, password, phone, loyalty_points, image_url
+        });
+        res.status(201).json(customer);
     } catch (error) {
-        res.status(500).json({message:'Internal server error'});
+        res.status(500).json({ error: error.message });
     }
-}
+};
 
 exports.updateCustomer = async (req, res) => {
     try {
-        const customerId = req.params.id;
-        const customer = await Customer.findByPk(customerId);
+        const customer = await Customer.findByPk(req.params.id);
+        if (!customer) {
+            return res.status(404).json({ error: 'Customer not found' });
+        }
 
-        if(!customer){return res.status(404).json({message:'Customer ID not found.'});}
+        const updateData = { ...req.body };
+        
+        if (req.file) {
+            updateData.image_url = req.file.path;  
+        }
 
-        await customer.update(req.body);
+        delete updateData.password;
 
-        res.status(200).json({
-            message:'Customer updated successfully.',
-            list: req.body
-        })
-
+        await customer.update(updateData);
+        
+        res.json({
+            message: 'Customer updated successfully',
+            customer
+        });
     } catch (error) {
-        res.status(500).json({message:'Internal server error'})
+        res.status(500).json({ error: error.message });
     }
-}
+};
 
 exports.removeCustomer = async (req,res) => {
     try {

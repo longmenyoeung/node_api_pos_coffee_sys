@@ -29,11 +29,19 @@ const Customer = sequelize.define('Customer', {
     loyalty_points: {
         type: DataTypes.INTEGER,
         defaultValue: 0
+    },
+    is_active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
+    },
+    image_url: {                    
+        type: DataTypes.STRING(500),
+        allowNull: true
     }
 
 }, {
     tableName: 'customers',
-    timestamps: false
+    timestamps: true
 })
 
 module.exports = Customer

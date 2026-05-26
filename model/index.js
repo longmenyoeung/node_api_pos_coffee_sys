@@ -7,6 +7,7 @@ const Customer = require("./customer.model");
 const OrderItem = require("./orderItem.model");
 const Inventory = require("./inventory.model");
 const Payment = require("./payment.model");
+const User = require("./user.model")
 
 
 
@@ -52,5 +53,6 @@ module.exports = {
     Order,
     OrderItem,
     Inventory,
-    Payment
+    Payment,
+    User
 }

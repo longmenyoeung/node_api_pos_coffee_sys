@@ -1,5 +1,6 @@
 const { where } = require("sequelize");
 const { Product, Category } = require("../model");
+const cloudinary = require('../config/cloudinary');
 
 exports.getAllProducts = async (req, res) => {
     try {
@@ -43,80 +44,45 @@ exports.getProductById = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
     try {
-        const {name, description, category_id, price, is_active} = req.body;
-
-        if(!name || !category_id || price == undefined){
-            return res.status(400).json({message:'Please complete all the feilds.'});
+        console.log('req.file:', req.file);
+        const { name, description, category_id, price, is_active } = req.body;
+        if (!name || !category_id || price === undefined) {
+            return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        const findCateId = await Category.findByPk(category_id);
+        // req.file is automatically uploaded to Cloudinary by multer-storage-cloudinary
+        const image_url = req.file ? req.file.path : null;   // Cloudinary returns the secure URL
 
-        if(findCateId < 1) {
-            return res.status(404).json({message:'category id not found, please create category first.'});
-        }
-
-
-        const product = await Product.create({name,description,category_id,price,is_active});
-
-        res.status(201).json({
-            message:'product added successfully',
-            list: product
+        const product = await Product.create({
+            name,
+            description,
+            category_id,
+            price,
+            is_active,
+            image_url     
         });
-
+        res.status(201).json(product);
     } catch (error) {
-        res.status(500).json({
-            message: 'Internal server error',
-            err:error.message
-        })
+        res.status(500).json({ error: error.message });
     }
-}
+};
 
 exports.updateProduct = async (req, res) => {
     try {
-        const {name, description, category_id, price, is_active} = req.body;
-        const productId = req.params.id;
+        const product = await Product.findByPk(req.params.id);
+        if (!product) return res.status(404).json({ error: 'Product not found' });
 
-        //1 find product in product table
-        const product = await Product.findByPk(productId);
-        if(!product){
-            return res.status(404).json({
-                message:'Product ID not found.'
-            });
+        const updateData = { ...req.body };
+        if (req.file) {
+            updateData.image_url = req.file.path; 
         }
 
-        //2 find product in product table
-        const category = await Category.findByPk(category_id);
-        if(!category){
-            return res.status(404).json({
-                message:'The Category ID you provided does not exist.'
-            });
-        }
-
-        // 3. Update the PRODUCT (not the category!)
-            await Product.update({
-            name, 
-            description, 
-            category_id, 
-            price, 
-            is_active
-        },{where:{product_id:productId}}) // Tell Sequelize WHICH product to update
-
-
-        res.status(200).json({
-            message:'Product updated successfully',
-            list : {
-                name, 
-                description, 
-                category_id, 
-                price, 
-                is_active
-            }
-        })
-
+        await product.update(updateData);
+        res.json(product);
     } catch (error) {
-        res.status(500).json({message: 'Internal server error.', err: error.message});       
+        res.status(500).json({ error: error.message });
     }
-}
+};
 
 
 exports.removeProduct = async (req, res) => {
