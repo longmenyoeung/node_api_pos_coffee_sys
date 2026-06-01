@@ -1,9 +1,8 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
 
-
-const OrderItem = sequelize.define('OrderItem' , {
-    item_id : {
+const OrderItem = sequelize.define('OrderItem', {
+    item_id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true
@@ -12,7 +11,7 @@ const OrderItem = sequelize.define('OrderItem' , {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-            model:'orders',
+            model: 'orders',
             key: 'order_id'
         }
     },
@@ -25,23 +24,21 @@ const OrderItem = sequelize.define('OrderItem' , {
         }
     },
     quantity: {
-        type:DataTypes.INTEGER,
+        type: DataTypes.INTEGER,
         allowNull: false,
-        validate: {
-            min: 1
-        }
+        validate: { min: 1 }
     },
-    customerzation_points : {
+    customization_points: {         
         type: DataTypes.TEXT,
         allowNull: true
     },
-    subtotal : {
-        type : DataTypes.DECIMAL(10,2),
-        allowNull:false
+    subtotal: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false
     }
-},{
+}, {
     tableName: 'order_items',
     timestamps: false
-})
+});
 
-module.exports  = OrderItem
+module.exports = OrderItem;

@@ -13,6 +13,7 @@ const User = sequelize.define('User', {
     full_name: { type: DataTypes.STRING(100), allowNull: false },
     phone: { type: DataTypes.STRING(20), allowNull: true },
     role: { type: DataTypes.ENUM('admin', 'user'), defaultValue: 'user' },
+    loyalty_points: { type: DataTypes.INTEGER, defaultValue: 0 },
     image_url: { type: DataTypes.STRING(500), allowNull: true },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
     last_login: { type: DataTypes.DATE, allowNull: true }
