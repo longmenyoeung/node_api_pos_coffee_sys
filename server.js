@@ -20,7 +20,7 @@ const port = process.env.PORT || 3306;
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Middleware 
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use('/api/categories', categoryRoute)
 app.use('/api/products', productRoute)

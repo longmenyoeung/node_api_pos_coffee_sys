@@ -29,7 +29,7 @@ const syncDatabase = async (force = false) => {
     try {
         await sequelize.authenticate();
         console.log("Connection to MySQL established");
-        await sequelize.sync({ alter: true, force: false });
+        await sequelize.sync({ alter: false, force: false });
         console.log('Table synchronized migration completed.');
     } catch (error) {
         console.error("Database sync error: ", error);

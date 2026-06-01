@@ -4,7 +4,6 @@ const { Payment, Order, User, sequelize } = require("../model");
 // ========== HELPER: Generate SHA1 hash for khqr.cc ==========
 function generateHash(secret, transactionId, amount, successUrl, remark) {
     const raw = secret + String(transactionId) + String(amount) + successUrl + (remark || '');
-    console.log('RAW STRING:', raw);  // ← add this to debug
     return crypto.createHash('sha1').update(raw).digest('hex');
 }
 
@@ -14,9 +13,8 @@ exports.finalizeOrderPayment = async (orderId, paymentMethod = 'KHQR') => {
     try {
         const order = await Order.findByPk(orderId, { transaction });
         if (!order) throw new Error("Order not found");
-        if (order.payment_status === 'paid') return; // already paid
+        if (order.payment_status === 'paid') return;
 
-        // Create payment record
         await Payment.create({
             order_id: order.order_id,
             payment_method: paymentMethod,
@@ -24,17 +22,13 @@ exports.finalizeOrderPayment = async (orderId, paymentMethod = 'KHQR') => {
             timestamp: new Date(),
         }, { transaction });
 
-        // Update loyalty points for the user
         const user = await User.findByPk(order.user_id, { transaction });
         if (user) {
             const pointsEarned = Math.floor(order.total_amount);
-            const newPoints = user.loyalty_points + pointsEarned;
-            await user.update({ loyalty_points: newPoints }, { transaction });
+            await user.update({ loyalty_points: user.loyalty_points + pointsEarned }, { transaction });
         }
 
-        // Mark order as completed and paid
         await order.update({ status: "Completed", payment_status: 'paid' }, { transaction });
-
         await transaction.commit();
         return true;
     } catch (error) {
@@ -43,7 +37,7 @@ exports.finalizeOrderPayment = async (orderId, paymentMethod = 'KHQR') => {
     }
 };
 
-// ========== 1. Initiate KHQR payment (redirect to khqr.cc) ==========
+// ========== 1. Initiate KHQR payment ==========
 exports.initiateKhqrPayment = async (req, res) => {
     try {
         const { order_id, amount, remark } = req.body;
@@ -57,18 +51,17 @@ exports.initiateKhqrPayment = async (req, res) => {
             return res.status(500).json({ error: 'KHQR credentials missing' });
         }
 
-        // Use environment variable for public URL, fallback to localhost (development)
         const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-        const successUrl = `${baseUrl}/api/payment/success`;
+        const successUrl = `https://armed-pretext-cognition.ngrok-free.dev/api/payment/success`;
         const hash = generateHash(secretKey, order_id, amount, successUrl, remark || '');
-        console.log('Profile ID:', profileId);
-        console.log('Secret Key:', secretKey);
-        console.log('Order ID:', order_id);
-        console.log('Amount:', amount);
-        console.log('Success URL:', successUrl);
-        console.log('Remark:', remark);
-        console.log('Hash raw string:', `${secretKey}${order_id}${amount}${successUrl}${remark || ''}`);
-        console.log('Generated hash:', hash);
+
+        // Debug logs
+        console.log('✅ Profile ID:', profileId);
+        console.log('✅ Order ID:', order_id);
+        console.log('✅ Amount:', amount);
+        console.log('✅ Success URL:', successUrl);
+        console.log('✅ Remark:', remark);
+        console.log('✅ Generated hash:', hash);
 
         const redirectUrl = `https://khqr.cc/api/payment/request/${profileId}?transaction_id=${order_id}&amount=${amount}&success_url=${encodeURIComponent(successUrl)}&remark=${encodeURIComponent(remark || '')}&hash=${hash}`;
 
@@ -81,30 +74,28 @@ exports.initiateKhqrPayment = async (req, res) => {
 
 // ========== 2. Callback after khqr.cc payment ==========
 exports.paymentSuccess = async (req, res) => {
+    console.log('✅ Callback received:', req.query);
     const { transaction_id, status } = req.query;
-    console.log('Payment callback received:', req.query);
+
     if (status === 'success' && transaction_id) {
         try {
             await exports.finalizeOrderPayment(transaction_id, 'KHQR');
             return res.send(`
-                <h1>✅ Payment Successful!</h1>
-                <p>Order ${transaction_id} has been completed.</p>
-                <a href="/">Return to home</a>
+                <html>
+                <body style="font-family:sans-serif; text-align:center; padding:50px;">
+                    <h1>✅ Payment Successful!</h1>
+                    <p>Order <strong>#${transaction_id}</strong> has been completed.</p>
+                    <p>Thank you for your purchase ☕</p>
+                </body>
+                </html>
             `);
         } catch (err) {
-            console.error('Finalize error:', err);
-            return res.send(`
-                <h1>⚠️ Error finalizing order</h1>
-                <p>${err.message}</p>
-                <a href="/">Return to home</a>
-            `);
+            console.error('❌ Finalize order error:', err);
+            return res.status(500).send('Error finalizing order');
         }
     } else {
-        return res.send(`
-            <h1>⚠️ Payment not completed</h1>
-            <p>Order ${transaction_id} status: ${status || 'unknown'}</p>
-            <a href="/">Try again</a>
-        `);
+        console.log('❌ Invalid callback - status:', status, 'transaction_id:', transaction_id);
+        return res.status(400).send('Invalid callback');
     }
 };
 
@@ -132,4 +123,3 @@ exports.getPaymentByOrderId = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-

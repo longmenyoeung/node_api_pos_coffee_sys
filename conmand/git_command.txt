@@ -30,3 +30,10 @@ bash
 git add .
 git commit -m "Describe your changes here"
 git push
+
+//// antoher runing terminal
+ngrok http 3100
+USE pos_coffee_sys;
+SHOW INDEX FROM users;
+DROP INDEX email_2 ON users;
+DROP INDEX email_3 ON users;
