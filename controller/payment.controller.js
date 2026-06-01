@@ -52,7 +52,7 @@ exports.initiateKhqrPayment = async (req, res) => {
         }
 
         const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
-        const successUrl = `https://armed-pretext-cognition.ngrok-free.dev/api/payment/success`;
+        const successUrl = `${process.env.APP_URL}/api/payment/success`;
         const hash = generateHash(secretKey, order_id, amount, successUrl, remark || '');
 
         // Debug logs
