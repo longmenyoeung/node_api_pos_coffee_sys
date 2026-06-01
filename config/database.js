@@ -3,18 +3,18 @@ require('dotenv').config();
 
 let sequelize;
 if (process.env.DATABASE_URL) {
-    // Production (Render) – use TiDB Cloud
+    // Production – use the cloud database (TiDB Cloud)
     sequelize = new Sequelize(process.env.DATABASE_URL, {
         dialect: 'mysql',
         dialectOptions: {
             ssl: {
-                rejectUnauthorized: false   // required for TiDB Cloud
+                rejectUnauthorized: false   // TiDB Cloud requires SSL
             }
         },
         logging: false
     });
 } else {
-    // Local development (fallback to your local MySQL)
+    // Local development – use your local MySQL
     sequelize = new Sequelize(
         process.env.DB_NAME,
         process.env.DB_USER,
