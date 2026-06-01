@@ -1,36 +1,37 @@
 const User = require('../model/user.model');
-require('dotenv').config();
-const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
-// Helper: hash password
 const hashPassword = async (password) => {
     const salt = await bcrypt.genSalt(10);
     return bcrypt.hash(password, salt);
 };
 
-// ========== REGISTER new staff user ==========
+// ========== REGISTER new user ==========
 exports.register = async (req, res) => {
     try {
-        const { username, email, password, full_name, role } = req.body;
-        if (!username || !email || !password || !full_name) {
+        const { email, password, full_name, role} = req.body;
+        if (!email || !password || !full_name) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        // Check existing user
         const existing = await User.findOne({ where: { email } });
         if (existing) return res.status(409).json({ error: 'Email already registered' });
 
         const password_hash = await hashPassword(password);
+        let image_url = null;
+        if (req.file) {
+            image_url = req.file.path ;
+        }
         const user = await User.create({
-            username,
             email,
             password_hash,
             full_name,
-            role: role || 'cashier'
+            role: role === 'admin' ? 'admin' : 'user',   
+            image_url: image_url || null
         });
 
-        // Remove password from response
         const { password_hash: _, ...userData } = user.toJSON();
         res.status(201).json({ message: 'User created successfully', user: userData });
     } catch (error) {
@@ -52,10 +53,8 @@ exports.login = async (req, res) => {
         const valid = await bcrypt.compare(password, user.password_hash);
         if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
-        // Update last login
         await user.update({ last_login: new Date() });
 
-        // Generate JWT
         const token = jwt.sign(
             { user_id: user.user_id, role: user.role },
             process.env.JWT_SECRET,
@@ -70,7 +69,8 @@ exports.login = async (req, res) => {
                 username: user.username,
                 full_name: user.full_name,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                image_url: user.image_url
             }
         });
     } catch (error) {
@@ -78,7 +78,7 @@ exports.login = async (req, res) => {
     }
 };
 
-// ========== GET all users (admin only, but we'll protect in route) ==========
+// ========== GET all users ==========
 exports.getAllUsers = async (req, res) => {
     try {
         const users = await User.findAll({ attributes: { exclude: ['password_hash'] } });
@@ -105,9 +105,22 @@ exports.updateUser = async (req, res) => {
         const user = await User.findByPk(req.params.id);
         if (!user) return res.status(404).json({ error: 'User not found' });
 
-        const { username, email, full_name, role, is_active } = req.body;
-        await user.update({ username, email, full_name, role, is_active });
+        const { email, full_name, phone, role, is_active } = req.body;
+        let image_url = user.image_url;
         
+        if (req.file) {
+            image_url = req.file.path;   
+        }
+
+        await user.update({
+            email,
+            full_name,
+            phone,
+            role,
+            is_active,
+            image_url
+        });
+
         const { password_hash, ...userData } = user.toJSON();
         res.json({ message: 'User updated', user: userData });
     } catch (error) {
@@ -115,7 +128,7 @@ exports.updateUser = async (req, res) => {
     }
 };
 
-// ========== DELETE user (soft delete – deactivate) ==========
+// ========== DELETE user ==========
 exports.deleteUser = async (req, res) => {
     try {
         const user = await User.findByPk(req.params.id);
@@ -131,7 +144,7 @@ exports.deleteUser = async (req, res) => {
 exports.changePassword = async (req, res) => {
     try {
         const { oldPassword, newPassword } = req.body;
-        const userId = req.user.user_id;  // from auth middleware
+        const userId = req.user.user_id;
 
         const user = await User.findByPk(userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
@@ -142,6 +155,19 @@ exports.changePassword = async (req, res) => {
         const newHash = await hashPassword(newPassword);
         await user.update({ password_hash: newHash });
         res.json({ message: 'Password changed successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// ========== Get current user profile (for /me) ==========
+exports.getCurrentUser = async (req, res) => {
+    try {
+        const user = await User.findByPk(req.user.user_id, {
+            attributes: { exclude: ['password_hash'] }
+        });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json(user);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

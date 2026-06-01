@@ -1,4 +1,4 @@
-const { Inventory } = require('../models');
+const { Inventory } = require('../model');
 const { Op } = require('sequelize');
 
 exports.getAllInventory = async (req, res) => {

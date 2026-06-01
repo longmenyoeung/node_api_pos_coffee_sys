@@ -7,6 +7,7 @@ const productRoute = require('./routes/product.route')
 const customerRoute = require('./routes/customer.route')
 const orderRoute = require('./routes/order.route')
 const userRoutes = require('./routes/user.route');
+const inventoryRoute = require("./routes/inventory.route")
 
 // Load environment variables
 dotenv.config();
@@ -22,6 +23,7 @@ app.use('/api/products', productRoute)
 app.use('/api/customers', customerRoute)
 app.use('/api/orders', orderRoute)
 app.use('/api/users', userRoutes);
+app.use('/api/inventory', inventoryRoute);
 
 
 
