@@ -51,19 +51,25 @@ exports.initiateKhqrPayment = async (req, res) => {
             return res.status(500).json({ error: 'KHQR credentials missing' });
         }
 
-        const baseUrl = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
         const successUrl = `${process.env.APP_URL}/api/payment/success`;
-        const hash = generateHash(secretKey, order_id, amount, successUrl, remark || '');
+        const remarkStr = remark || '';  // ← consistent remark variable
+        const amountStr = String(amount); // ← consistent amount as string
 
-        // Debug logs
+        // Hash uses exact same values as URL
+        const rawString = secretKey + String(order_id) + amountStr + successUrl + remarkStr;
+        const hash = crypto.createHash('sha1').update(rawString).digest('hex');
+
         console.log('✅ Profile ID:', profileId);
         console.log('✅ Order ID:', order_id);
-        console.log('✅ Amount:', amount);
+        console.log('✅ Amount:', amountStr);
         console.log('✅ Success URL:', successUrl);
-        console.log('✅ Remark:', remark);
+        console.log('✅ Remark:', remarkStr);
+        console.log('✅ RAW STRING:', rawString);
         console.log('✅ Generated hash:', hash);
 
-        const redirectUrl = `https://khqr.cc/api/payment/request/${profileId}?transaction_id=${order_id}&amount=${amount}&success_url=${encodeURIComponent(successUrl)}&remark=${encodeURIComponent(remark || '')}&hash=${hash}`;
+        const redirectUrl = `https://khqr.cc/api/payment/request/${profileId}?transaction_id=${order_id}&amount=${amountStr}&success_url=${encodeURIComponent(successUrl)}&remark=${encodeURIComponent(remarkStr)}&hash=${hash}`;
+
+        console.log('🔗 Full redirect URL:', redirectUrl);
 
         res.json({ redirect_url: redirectUrl });
     } catch (error) {
