@@ -52,8 +52,8 @@ exports.initiateKhqrPayment = async (req, res) => {
         }
 
         const successUrl = `${process.env.APP_URL}/api/payment/success`;
-        const remarkStr = remark || '';  // ← consistent remark variable
-        const amountStr = String(amount); // ← consistent amount as string
+        const remarkStr = remark || '';  
+        const amountStr = Number(amount).toFixed(2);
 
         // Hash uses exact same values as URL
         const rawString = secretKey + String(order_id) + amountStr + successUrl + remarkStr;
