@@ -1,10 +1,8 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/database");
-const { allow } = require("joi");
 
-
-const Payment = sequelize.define('Payment',{
-    payment_id : {
+const Payment = sequelize.define('Payment', {
+    payment_id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
         autoIncrement: true
@@ -17,21 +15,21 @@ const Payment = sequelize.define('Payment',{
             key: 'order_id'
         }
     },
-    payment_method:{
-        type:DataTypes.ENUM("Credit Card", "ABA", "WING", "ACELEDA", "BAKONG"),
-        allowNull:false
-    },
-    amount: {
-        type:DataTypes.DECIMAL(10,2),
+    payment_method: {
+        type: DataTypes.ENUM("Credit Card", "ABA", "WING", "ACELEDA", "BAKONG", "KHQR"),
         allowNull: false
     },
-    timstamp:{
-        type:DataTypes.DATE,
+    amount: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false
+    },
+    timestamp: {   // fixed spelling from 'timstamp'
+        type: DataTypes.DATE,
         defaultValue: DataTypes.NOW
     }
-},{
+}, {
     tableName: 'payments',
-    timstamp: false
+    timestamps: false   
 });
 
-module.exports = Payment
+module.exports = Payment;
