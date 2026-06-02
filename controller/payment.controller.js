@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { Payment, Order, User, sequelize } = require("../model");
+const { Payment, Order, User, sequelize } = require("../models");
 
 // ========== HELPER: Generate SHA1 hash for khqr.cc ==========
 function generateHash(secret, transactionId, amount, successUrl, remark) {
@@ -81,19 +81,38 @@ exports.initiateKhqrPayment = async (req, res) => {
 
 // ========== 2. Callback after khqr.cc payment ==========
 exports.paymentSuccess = async (req, res, next) => {
-    console.log('✅ req.params:', req.params);
-    console.log('✅ req.query:', req.query);
+    console.log('✅ Callback received - params:', req.params);
+    console.log('✅ Query:', req.query);
 
-    const orderId = req.query.transaction_id || req.query.order_id || req.params.order_id;
+    // Try to get order_id from URL path first, then from query parameters
+    const orderId = req.params.order_id || req.query.transaction_id || req.query.order_id;
     if (!orderId) {
-        return res.status(400).send(`<h1>⚠️ Invalid Callback</h1><p>Missing order ID.</p>`);
+        return res.status(400).send(`
+            <html>
+            <body style="font-family:sans-serif; text-align:center; padding:50px;">
+                <h1>⚠️ Missing Order ID</h1>
+                <p>Could not identify the order. Please contact support.</p>
+                <a href="/">Return to home</a>
+            </body>
+            </html>
+        `);
     }
 
     try {
+        // Finalize the order (idempotent: does nothing if already paid)
         await exports.finalizeOrderPayment(orderId, 'KHQR');
-        return res.send(`<h1>✅ Payment Successful!</h1><p>Order #${orderId} completed.</p>`);
+        return res.send(`
+            <html>
+            <body style="font-family:sans-serif; text-align:center; padding:50px;">
+                <h1>✅ Payment Successful!</h1>
+                <p>Order <strong>#${orderId}</strong> has been completed.</p>
+                <p>Thank you for your purchase ☕</p>
+                <a href="${process.env.APP_URL}">Return to shop</a>
+            </body>
+            </html>
+        `);
     } catch (err) {
-        console.error('Finalize error:', err);
+        console.error('❌ Finalize order error:', err);
         return next(err);
     }
 };
