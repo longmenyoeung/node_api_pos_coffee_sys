@@ -3,11 +3,10 @@ const router = express.Router();
 const paymentController = require('../controller/payment.controller');
 const { verifyToken } = require('../middlewares/auth');
 
-// Support both with and without order_id in path
-router.get('/payment/success', paymentController.paymentSuccess);
+// Accept order_id in the URL path (so it's captured even if query params are missing)
 router.get('/payment/success/:order_id', paymentController.paymentSuccess);
-router.post('/payment/success', paymentController.paymentSuccess);
-router.post('/payment/success/:order_id', paymentController.paymentSuccess);
+// Also keep the plain version for compatibility
+router.get('/payment/success', paymentController.paymentSuccess);
 
 // Protected routes
 router.post('/khqr/initiate', verifyToken, paymentController.initiateKhqrPayment);
