@@ -83,6 +83,20 @@ exports.paymentSuccess = async (req, res) => {
     console.log('✅ Callback received:', req.query);
     const { transaction_id, status } = req.query;
 
+    if (!transaction_id || !status) {
+        console.log('❌ Missing required parameters. Full query:', req.query);
+        return res.status(400).send(`
+            <html>
+            <body style="font-family:sans-serif; text-align:center; padding:50px;">
+                <h1>⚠️ Invalid Callback</h1>
+                <p>Missing transaction_id or status. Please contact support.</p>
+                <p>Received: ${JSON.stringify(req.query)}</p>
+                <a href="/">Return to home</a>
+            </body>
+            </html>
+        `);
+    }
+
     if (status === 'success' && transaction_id) {
         try {
             await exports.finalizeOrderPayment(transaction_id, 'KHQR');
@@ -97,14 +111,22 @@ exports.paymentSuccess = async (req, res) => {
             `);
         } catch (err) {
             console.error('❌ Finalize order error:', err);
-            return res.status(500).send('Error finalizing order');
+            return res.status(500).send(`Error finalizing order: ${err.message}`);
         }
     } else {
         console.log('❌ Invalid callback - status:', status, 'transaction_id:', transaction_id);
-        return res.status(400).send('Invalid callback');
+        return res.status(400).send(`
+            <html>
+            <body style="font-family:sans-serif; text-align:center; padding:50px;">
+                <h1>⚠️ Payment not completed</h1>
+                <p>Status: ${status}</p>
+                <p>Order ID: ${transaction_id}</p>
+                <a href="/">Return to home</a>
+            </body>
+            </html>
+        `);
     }
 };
-
 // ========== 3. Get all payments (admin) ==========
 exports.getAllPayments = async (req, res) => {
     try {
