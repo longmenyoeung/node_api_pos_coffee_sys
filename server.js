@@ -31,6 +31,16 @@ app.use('/api/inventory', inventoryRoute);
 app.use('/api/khqr', khqrRoutes);
 app.use('/api', paymentRoutes);
 
+// Global error handler
+app.use((err, req, res, next) => {
+    console.error('❌ Unhandled error:', err);
+    res.status(500).json({ 
+        error: 'Internal server error', 
+        message: err.message,
+        stack: process.env.NODE_ENV === 'production' ? undefined : err.stack 
+    });
+});
+
 
 
 syncDatabase()

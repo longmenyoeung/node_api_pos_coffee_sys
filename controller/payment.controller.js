@@ -51,7 +51,8 @@ exports.initiateKhqrPayment = async (req, res) => {
             return res.status(500).json({ error: 'KHQR credentials missing' });
         }
 
-        const successUrl = `${process.env.APP_URL}/api/payment/success`;
+        // const successUrl = `${process.env.APP_URL}/api/payment/success`;
+        const successUrl = `${process.env.APP_URL}/api/payment/success/${order_id}`;
         const remarkStr = remark || '';  
         const amountStr = Number(amount).toFixed(2);
 
@@ -80,33 +81,30 @@ exports.initiateKhqrPayment = async (req, res) => {
 
 // ========== 2. Callback after khqr.cc payment ==========
 exports.paymentSuccess = async (req, res) => {
-    // Support both GET query params and POST body
-    const query = Object.keys(req.query).length ? req.query : req.body;
-    console.log('✅ Callback received query:', req.query);
-    console.log('✅ Callback received body:', req.body);
-    console.log('✅ Full URL:', req.url);
+    console.log('✅ Full originalUrl:', req.originalUrl);
+    console.log('✅ req.params:', req.params);
+    console.log('✅ req.query:', JSON.stringify(req.query));
 
-    const { transaction_id, status } = query;
+    const transaction_id = req.params.order_id || req.query.transaction_id;
 
-    if (status === 'success' && transaction_id) {
-        try {
-            await exports.finalizeOrderPayment(transaction_id, 'KHQR');
-            return res.send(`
-                <html>
-                <body style="font-family:sans-serif; text-align:center; padding:50px;">
-                    <h1>✅ Payment Successful!</h1>
-                    <p>Order <strong>#${transaction_id}</strong> has been completed.</p>
-                    <p>Thank you for your purchase ☕</p>
-                </body>
-                </html>
-            `);
-        } catch (err) {
-            console.error('❌ Finalize order error:', err);
-            return res.status(500).send('Error finalizing order');
-        }
-    } else {
-        console.log('❌ Invalid callback - status:', status, 'transaction_id:', transaction_id);
-        return res.status(400).send(`Invalid callback - received: ${JSON.stringify(query)}`);
+    if (!transaction_id) {
+        return res.status(400).send('Missing transaction_id');
+    }
+
+    try {
+        await exports.finalizeOrderPayment(transaction_id, 'KHQR');
+        return res.send(`
+            <html>
+            <body style="font-family:sans-serif; text-align:center; padding:50px;">
+                <h1>✅ Payment Successful!</h1>
+                <p>Order <strong>#${transaction_id}</strong> has been completed.</p>
+                <p>Thank you for your purchase ☕</p>
+            </body>
+            </html>
+        `);
+    } catch (err) {
+        console.error('❌ Finalize order error:', err);
+        return res.status(500).send('Error finalizing order');
     }
 };
 // ========== 3. Get all payments (admin) ==========
