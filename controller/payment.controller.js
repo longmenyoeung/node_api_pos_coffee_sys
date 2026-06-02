@@ -84,7 +84,6 @@ exports.paymentSuccess = async (req, res, next) => {
     console.log('✅ req.params:', req.params);
     console.log('✅ req.query:', req.query);
 
-    // Priority: query params, then URL path param, then nothing
     const orderId = req.query.transaction_id || req.query.order_id || req.params.order_id;
     if (!orderId) {
         return res.status(400).send(`<h1>⚠️ Invalid Callback</h1><p>Missing order ID.</p>`);

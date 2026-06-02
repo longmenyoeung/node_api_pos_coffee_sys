@@ -28,8 +28,8 @@ app.use('/api/customers', customerRoute)
 app.use('/api/orders', orderRoute)
 app.use('/api/users', userRoutes);
 app.use('/api/inventory', inventoryRoute);
-app.use('/api/khqr', khqrRoutes);
 app.use('/api', paymentRoutes);
+app.use('/api/khqr', khqrRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

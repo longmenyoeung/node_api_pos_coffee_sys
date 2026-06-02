@@ -3,9 +3,10 @@ const router = express.Router();
 const paymentController = require('../controller/payment.controller');
 const { verifyToken } = require('../middlewares/auth');
 
-// This route will capture the order_id from the URL path
+
+
 router.get('/payment/success/:order_id', paymentController.paymentSuccess);
-// Keep a fallback for old callbacks (optional)
+// Keep a fallback route for general callbacks, but the specific one will be used first.
 router.get('/payment/success', paymentController.paymentSuccess);
 
 router.post('/khqr/initiate', verifyToken, paymentController.initiateKhqrPayment);
