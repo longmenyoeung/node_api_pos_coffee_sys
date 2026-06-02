@@ -80,22 +80,13 @@ exports.initiateKhqrPayment = async (req, res) => {
 
 // ========== 2. Callback after khqr.cc payment ==========
 exports.paymentSuccess = async (req, res) => {
-    console.log('✅ Callback received:', req.query);
-    const { transaction_id, status } = req.query;
+    // Support both GET query params and POST body
+    const query = Object.keys(req.query).length ? req.query : req.body;
+    console.log('✅ Callback received query:', req.query);
+    console.log('✅ Callback received body:', req.body);
+    console.log('✅ Full URL:', req.url);
 
-    if (!transaction_id || !status) {
-        console.log('❌ Missing required parameters. Full query:', req.query);
-        return res.status(400).send(`
-            <html>
-            <body style="font-family:sans-serif; text-align:center; padding:50px;">
-                <h1>⚠️ Invalid Callback</h1>
-                <p>Missing transaction_id or status. Please contact support.</p>
-                <p>Received: ${JSON.stringify(req.query)}</p>
-                <a href="/">Return to home</a>
-            </body>
-            </html>
-        `);
-    }
+    const { transaction_id, status } = query;
 
     if (status === 'success' && transaction_id) {
         try {
@@ -111,20 +102,11 @@ exports.paymentSuccess = async (req, res) => {
             `);
         } catch (err) {
             console.error('❌ Finalize order error:', err);
-            return res.status(500).send(`Error finalizing order: ${err.message}`);
+            return res.status(500).send('Error finalizing order');
         }
     } else {
         console.log('❌ Invalid callback - status:', status, 'transaction_id:', transaction_id);
-        return res.status(400).send(`
-            <html>
-            <body style="font-family:sans-serif; text-align:center; padding:50px;">
-                <h1>⚠️ Payment not completed</h1>
-                <p>Status: ${status}</p>
-                <p>Order ID: ${transaction_id}</p>
-                <a href="/">Return to home</a>
-            </body>
-            </html>
-        `);
+        return res.status(400).send(`Invalid callback - received: ${JSON.stringify(query)}`);
     }
 };
 // ========== 3. Get all payments (admin) ==========
