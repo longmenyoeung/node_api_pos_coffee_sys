@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { Payment, Order, User, sequelize } = require("../model");
+const { Payment, Order, User, sequelize } = require("../models");
 
 // ========== HELPER: Generate SHA1 hash for khqr.cc ==========
 function generateHash(secret, transactionId, amount, successUrl, remark) {
@@ -13,21 +13,23 @@ exports.finalizeOrderPayment = async (orderId, paymentMethod = 'KHQR') => {
     try {
         const order = await Order.findByPk(orderId, { transaction });
         if (!order) throw new Error("Order not found");
-        if (order.payment_status === 'paid') return;
+        if (order.payment_status === 'paid') return; // already paid
 
         await Payment.create({
             order_id: order.order_id,
             payment_method: paymentMethod,
             amount: order.total_amount,
-            timestamp: new Date(),
+            timstamp: new Date(),      
         }, { transaction });
 
+        // Update loyalty points
         const user = await User.findByPk(order.user_id, { transaction });
         if (user) {
             const pointsEarned = Math.floor(order.total_amount);
             await user.update({ loyalty_points: user.loyalty_points + pointsEarned }, { transaction });
         }
 
+        // Mark order as completed
         await order.update({ status: "Completed", payment_status: 'paid' }, { transaction });
         await transaction.commit();
         return true;
@@ -37,7 +39,7 @@ exports.finalizeOrderPayment = async (orderId, paymentMethod = 'KHQR') => {
     }
 };
 
-// ========== 1. Initiate KHQR payment ==========
+// ========== 1. Initiate KHQR payment (redirect) ==========
 exports.initiateKhqrPayment = async (req, res) => {
     try {
         const { order_id, amount, remark } = req.body;
@@ -51,12 +53,11 @@ exports.initiateKhqrPayment = async (req, res) => {
             return res.status(500).json({ error: 'KHQR credentials missing' });
         }
 
-        // const successUrl = `${process.env.APP_URL}/api/payment/success`;
+        // Include order_id in the success URL path (captures it even if query params missing)
         const successUrl = `${process.env.APP_URL}/api/payment/success/${order_id}`;
-        const remarkStr = remark || '';  
+        const remarkStr = remark || '';
         const amountStr = Number(amount).toFixed(2);
 
-        // Hash uses exact same values as URL
         const rawString = secretKey + String(order_id) + amountStr + successUrl + remarkStr;
         const hash = crypto.createHash('sha1').update(rawString).digest('hex');
 
@@ -71,7 +72,6 @@ exports.initiateKhqrPayment = async (req, res) => {
         const redirectUrl = `https://khqr.cc/api/payment/request/${profileId}?transaction_id=${order_id}&amount=${amountStr}&success_url=${encodeURIComponent(successUrl)}&remark=${encodeURIComponent(remarkStr)}&hash=${hash}`;
 
         console.log('🔗 Full redirect URL:', redirectUrl);
-
         res.json({ redirect_url: redirectUrl });
     } catch (error) {
         console.error('Initiate KHQR payment error:', error);
@@ -81,55 +81,42 @@ exports.initiateKhqrPayment = async (req, res) => {
 
 // ========== 2. Callback after khqr.cc payment ==========
 exports.paymentSuccess = async (req, res, next) => {
-    console.log('✅ Callback received:', req.query);
-    const { transaction_id, status } = req.query;
+    console.log('✅ Callback received - params:', req.params);
+    console.log('✅ Query:', req.query);
 
-    // Graceful handling of missing parameters
-    if (!transaction_id || !status) {
-        console.log('❌ Missing required parameters. Full query:', req.query);
+    // Try to get order_id from URL path first, then from query parameters
+    const orderId = req.params.order_id || req.query.transaction_id || req.query.order_id;
+    if (!orderId) {
         return res.status(400).send(`
             <html>
             <body style="font-family:sans-serif; text-align:center; padding:50px;">
-                <h1>⚠️ Invalid Callback</h1>
-                <p>Missing transaction_id or status. Please contact support.</p>
-                <p>Received: ${JSON.stringify(req.query)}</p>
+                <h1>⚠️ Missing Order ID</h1>
+                <p>Could not identify the order. Please contact support.</p>
                 <a href="/">Return to home</a>
             </body>
             </html>
         `);
     }
 
-    if (status === 'success' && transaction_id) {
-        try {
-            await exports.finalizeOrderPayment(transaction_id, 'KHQR');
-            return res.send(`
-                <html>
-                <body style="font-family:sans-serif; text-align:center; padding:50px;">
-                    <h1>✅ Payment Successful!</h1>
-                    <p>Order <strong>#${transaction_id}</strong> has been completed.</p>
-                    <p>Thank you for your purchase ☕</p>
-                </body>
-                </html>
-            `);
-        } catch (err) {
-            console.error('❌ Finalize order error:', err);
-            // Pass error to Express error handler
-            return next(err);
-        }
-    } else {
-        console.log('❌ Invalid callback - status:', status, 'transaction_id:', transaction_id);
-        return res.status(400).send(`
+    try {
+        // Finalize the order (idempotent: does nothing if already paid)
+        await exports.finalizeOrderPayment(orderId, 'KHQR');
+        return res.send(`
             <html>
             <body style="font-family:sans-serif; text-align:center; padding:50px;">
-                <h1>⚠️ Payment not completed</h1>
-                <p>Status: ${status}</p>
-                <p>Order ID: ${transaction_id}</p>
-                <a href="/">Return to home</a>
+                <h1>✅ Payment Successful!</h1>
+                <p>Order <strong>#${orderId}</strong> has been completed.</p>
+                <p>Thank you for your purchase ☕</p>
+                <a href="${process.env.APP_URL}">Return to shop</a>
             </body>
             </html>
         `);
+    } catch (err) {
+        console.error('❌ Finalize order error:', err);
+        return next(err);
     }
 };
+
 // ========== 3. Get all payments (admin) ==========
 exports.getAllPayments = async (req, res) => {
     try {
