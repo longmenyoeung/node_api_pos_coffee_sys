@@ -81,38 +81,20 @@ exports.initiateKhqrPayment = async (req, res) => {
 
 // ========== 2. Callback after khqr.cc payment ==========
 exports.paymentSuccess = async (req, res, next) => {
-    console.log('✅ Callback received - params:', req.params);
-    console.log('✅ Query:', req.query);
+    console.log('✅ req.params:', req.params);
+    console.log('✅ req.query:', req.query);
 
-    // Try to get order_id from URL path first, then from query parameters
-    const orderId = req.params.order_id || req.query.transaction_id || req.query.order_id;
+    // Priority: query params, then URL path param, then nothing
+    const orderId = req.query.transaction_id || req.query.order_id || req.params.order_id;
     if (!orderId) {
-        return res.status(400).send(`
-            <html>
-            <body style="font-family:sans-serif; text-align:center; padding:50px;">
-                <h1>⚠️ Missing Order ID</h1>
-                <p>Could not identify the order. Please contact support.</p>
-                <a href="/">Return to home</a>
-            </body>
-            </html>
-        `);
+        return res.status(400).send(`<h1>⚠️ Invalid Callback</h1><p>Missing order ID.</p>`);
     }
 
     try {
-        // Finalize the order (idempotent: does nothing if already paid)
         await exports.finalizeOrderPayment(orderId, 'KHQR');
-        return res.send(`
-            <html>
-            <body style="font-family:sans-serif; text-align:center; padding:50px;">
-                <h1>✅ Payment Successful!</h1>
-                <p>Order <strong>#${orderId}</strong> has been completed.</p>
-                <p>Thank you for your purchase ☕</p>
-                <a href="${process.env.APP_URL}">Return to shop</a>
-            </body>
-            </html>
-        `);
+        return res.send(`<h1>✅ Payment Successful!</h1><p>Order #${orderId} completed.</p>`);
     } catch (err) {
-        console.error('❌ Finalize order error:', err);
+        console.error('Finalize error:', err);
         return next(err);
     }
 };
