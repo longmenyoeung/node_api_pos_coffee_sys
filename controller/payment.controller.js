@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const { Payment, Order, User, sequelize } = require("../models");
+const { Payment, Order, User, sequelize } = require("../model");
 
 // ========== HELPER: Generate SHA1 hash for khqr.cc ==========
 function generateHash(secret, transactionId, amount, successUrl, remark) {
