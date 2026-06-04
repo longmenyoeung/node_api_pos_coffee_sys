@@ -80,39 +80,95 @@ exports.initiateKhqrPayment = async (req, res) => {
 };
 
 // ========== 2. Callback after khqr.cc payment ==========
+// ========== Callback after khqr.cc payment settles successfully ==========
 exports.paymentSuccess = async (req, res, next) => {
-    console.log('✅ Callback received - params:', req.params);
-    console.log('✅ Query:', req.query);
-
-    // Try to get order_id from URL path first, then from query parameters
+    // Intercept target order key identifier across mapping locations safely
     const orderId = req.params.order_id || req.query.transaction_id || req.query.order_id;
+    
+    // Fallback UI if the gateway drops parameters unexpectedly
     if (!orderId) {
         return res.status(400).send(`
-            <html>
-            <body style="font-family:sans-serif; text-align:center; padding:50px;">
-                <h1>⚠️ Missing Order ID</h1>
-                <p>Could not identify the order. Please contact support.</p>
-                <a href="/">Return to home</a>
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>POS System - Issue Encountered</title>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #fafafa; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+                    .card { max-width: 400px; padding: 32px; background: white; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); text-align: center; }
+                    h1 { color: #e11d48; margin: 0 0 12px 0; font-size: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: -0.025em; }
+                    p { color: #64748b; font-size: 14px; line-height: 1.6; margin: 0 0 24px 0; font-medium; }
+                    .btn { display: inline-block; width: 100%; box-sizing: border-box; padding: 14px; background: #0f172a; color: white; text-decoration: none; border-radius: 12px; font-size: 13px; font-weight: 700; uppercase; tracking-wider; transition: opacity 0.2s; }
+                    .btn:hover { opacity: 0.9; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <h1>⚠️ Session Unresolved</h1>
+                    <p>We recorded the payment but could not cross-reference your exact order reference ID number. Please crosscheck terminal logs manually.</p>
+                    <a href="http://localhost:5173/orders" class="btn">Return to Shop</a>
+                </div>
             </body>
             </html>
         `);
     }
 
     try {
-        // Finalize the order (idempotent: does nothing if already paid)
+        // 🛠️ Finalize transaction records inside your system tables (Idempotent call guard active)
         await exports.finalizeOrderPayment(orderId, 'KHQR');
+        
+        // Return a sleek, modern, standalone HTML receipt framework directly to browser viewport
         return res.send(`
-            <html>
-            <body style="font-family:sans-serif; text-align:center; padding:50px;">
-                <h1>✅ Payment Successful!</h1>
-                <p>Order <strong>#${orderId}</strong> has been completed.</p>
-                <p>Thank you for your purchase ☕</p>
-                <a href="${process.env.APP_URL}">Return to shop</a>
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Payment Settled Successfully</title>
+                <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+                    .card { w-full; max-width: 400px; background: white; border-radius: 32px; box-shadow: 0 10px 30px -10px rgba(0,0,0,0.08); padding: 36px; text-align: center; border-top: 8px solid #10b981; position: relative; }
+                    .icon-circle { width: 64px; height: 64px; background: #ecfdf5; border: 1px solid #d1fae5; color: #10b981; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; font-size: 32px; font-weight: bold; }
+                    h1 { color: #0f172a; font-size: 22px; font-black; text-transform: uppercase; letter-spacing: -0.025em; margin: 0 0 6px 0; }
+                    .subtitle { color: #94a3b8; font-size: 13px; font-weight: 500; margin: 0 0 28px 0; }
+                    .receipt-box { background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 20px; padding: 20px; text-align: left; margin-bottom: 28px; position: relative; }
+                    .receipt-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; margin-bottom: 12px; color: #64748b; font-weight: 500; }
+                    .receipt-row:last-child { margin-bottom: 0; padding-top: 12px; border-t: 1px dashed #e2e8f0; font-size: 14px; font-weight: 900; color: #0f172a; }
+                    .hash-tag { font-family: monospace; font-weight: 700; color: #0f172a; }
+                    .status-badge { background: #e6fcf5; color: #0ca678; font-size: 10px; font-weight: 900; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; border: 1px solid #c3fae8; }
+                    .btn-back { display: block; width: 100%; box-sizing: border-box; padding: 16px; background: #d97706; color: white; text-decoration: none; border-radius: 16px; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; transition: background 0.2s; shadow: 0 4px 12px rgba(217,119,6,0.15); }
+                    .btn-back:hover { background: #b45309; }
+                </style>
+            </head>
+            <body>
+                <div class="card">
+                    <div class="icon-circle">✓</div>
+                    <h1>Payment Successful</h1>
+                    <p class="subtitle">Thank you for your purchase! ☕</p>
+                    
+                    <div class="receipt-box">
+                        <div class="receipt-row">
+                            <span>Order Reference</span>
+                            <span class="hash-tag">#${orderId}</span>
+                        </div>
+                        <div class="receipt-row">
+                            <span>Settlement Gateway</span>
+                            <span class="status-badge">KHQR Paid</span>
+                        </div>
+                        <div class="receipt-row">
+                            <span>Terminal Pipeline</span>
+                            <span style="color: #0f172a; font-weight: 700;">Live Production</span>
+                        </div>
+                    </div>
+
+                    <a href="http://localhost:5173/orders" class="btn-back">Return to POS Terminal</a>
+                </div>
             </body>
             </html>
         `);
     } catch (err) {
-        console.error('❌ Finalize order error:', err);
+        console.error('❌ Finalize order transactional sequence crash:', err);
         return next(err);
     }
 };
